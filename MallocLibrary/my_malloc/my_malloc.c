@@ -97,3 +97,25 @@ void *bf_malloc(size_t size){
 void bf_free(void* p){
   ff_free(p);
 }
+
+unsigned long get_data_segment_size(){
+  struct Block* b = head;
+  int sum = 0;
+  while(b){
+    sum += b->size;
+    b = b->next;
+  }
+  return sum;
+}
+
+unsigned long get_data_segment_free_space_size(){
+  struct Block* b = head;
+  int sum = 0;
+  while(b){
+    if(b->free){
+      sum += b->size;
+    }
+    b = b->next;
+  }
+  return sum;
+}
