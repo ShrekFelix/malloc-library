@@ -1,5 +1,14 @@
 #include <stdlib.h>
 
+struct Block {
+  struct Block* next;
+  struct Block* prev;
+  size_t size;
+  int free;
+};
+
+struct Block* head = NULL;
+struct Block* tail = NULL;
 
 //First Fit malloc/free
 void *ff_malloc(size_t size);
