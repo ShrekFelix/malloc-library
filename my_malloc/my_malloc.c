@@ -60,17 +60,18 @@ void *bf_malloc(size_t size){
     return NULL;
   }
   struct Block* b = head;
-  struct Block* best = b;
+  struct Block* best = NULL;
   while(b){
     if( b->free && b->size >= size ){ // found a free block big enough
       // TODO: can split this block to save space
-      if(b->size < best->size){
+      if(!best || b->size < best->size){
         best = b;
       }
     }
     b = b->next;
   }
   if(best){
+    best->free = 0;
     return best+1;
   }
   // no available block, get a new one

@@ -13,11 +13,19 @@ int* initArray(int size, char method){
 }
 
 int main(int argc, char *argv[]){
-    int size = (int)argv[1];
-    char method = argv[2];
+  if(argc != 3){
+    printf("argc error\n");
+    return 1;
+  }
+  int size = atoi(argv[1]);
+    char method = argv[2][0];
+    printf("size: %d\n", size);
+    printf("method: %c\n", method);
+
     int* array = initArray(size, method);
     for(int i=0; i<size; i++){
         printf("%d ",array[i]);
     }
+    printf("\n");
     return 0;
 }
