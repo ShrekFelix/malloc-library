@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-O3 -fPIC
+CFLAGS=-ggdb3 -O3 -fPIC
 DEPS=my_malloc.h
 MALLOC_VERSION=FF
 WDIR=/path/to/libmymalloc.so/directory

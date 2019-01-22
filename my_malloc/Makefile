@@ -1,9 +1,12 @@
 CC=gcc
-CFLAGS=-O3 -fPIC
+CFLAGS=-ggdb3 -O3 -fPIC
 DEPS=my_malloc.h
 
 all: lib
 
+test: test.o
+	$(CC) $(CFLAGS) -o test test.o
+	
 lib: my_malloc.o
 	$(CC) $(CFLAGS) -shared -o libmymalloc.so my_malloc.o
 
