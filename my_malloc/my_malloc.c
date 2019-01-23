@@ -1,5 +1,5 @@
 #include "my_malloc.h"
-#include <limits.h>
+#include <assert.h>
 
 //First Fit malloc/free
 void *ff_malloc(size_t size){
@@ -42,15 +42,18 @@ void ff_free(void* p){
       return;
     }
     struct Block* b = (struct Block*)p - 1; // locate block
+    assert(b->free == 0);
     b->free = 1;
     if(b->prev && b->prev->free){ // merge with prev
-      b->prev->size += b->size;
+      b->prev->size += b->size + sizeof(struct Block*);
       b->prev->next = b->next;
+      b->next->prev = b->prev;
       b = b->prev;
     }
     if(b->next && b->next->free){ // merge with next
-      b->size += b->next->size;
+      b->size += b->next->size + sizeof(struct Block*);
       b->next = b->next->next;
+      b->next->prev = b;
     }
 }
 
