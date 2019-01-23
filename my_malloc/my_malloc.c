@@ -1,5 +1,61 @@
 #include "my_malloc.h"
 #include <assert.h>
+#define BLK_SZ (sizeof(struct Block))
+
+struct Block* create_block(size_t size){
+  // initialize the block
+  struct Block* b = sbrk(size + BLK_SZ); // request space from kernel
+  if ((int)b == -1) { // sbrk failed
+    return NULL;
+  }
+  b->size = size;
+  b->next = NULL;
+  b->prev = NULL;
+  b->free = 0;
+  // insert the block into LL
+  if(!head){ // empty LL
+    head = b;
+    tail = b;
+  }else{
+    insert_block(tail, b);
+  }
+  return b;
+}
+
+void merge_blocks(struct Block* a, struct Block* b){
+  if( a && b && (void*)a + a->size + BLK_SZ == (void*)b){
+    a->size += b->size + BLK_SZ;
+    remove_block(b);
+  }
+}
+
+// insert b into LL right after p
+void insert_block(struct Block* p, struct Block* b){
+  assert(head && tail);
+  b->next = p->next;
+  b->prev = p;
+  p->next = b;
+  if(b->next){
+    b->next->prev = b;
+  }else{
+    tail = b;
+  }
+}
+
+// remove b from LL
+void remove_block(struct Block* b){
+  b->free = 0;
+  if(b != head){
+    b->prev->next = b->next;
+  }else{ // b is head and then head is removed
+    head = head->next; // replace head
+  }
+  if(b != tail){
+    b->next->prev = b->prev;
+  }else{ // b is tail and then tail is removed
+    tail = tail->prev; // replace tail
+  }
+}
 
 //First Fit malloc/free
 void *ff_malloc(size_t size){
@@ -8,53 +64,52 @@ void *ff_malloc(size_t size){
   }
   struct Block* b = head;
   while(b){
-    if( b->free && b->size >= size ){ // found a free block big enough
+    assert(b->free); // LL only tracks free blocks
+    if( b->size >= size ){ // found a free block big enough
       // TODO: can split this block to save space
-      b->free = 0;
+      remove_block(b);
       return b+1;
     }
     b = b->next;
   }
   // no available block, get a new one
-  // initialize the block
-  b = sbrk(size + sizeof(struct Block)); // request space from kernel
-  if ((int)b == -1) { // sbrk failed
-    return NULL;
-  }
-  b->size = size;
-  b->next = NULL;
-  b->prev = NULL;
-  b->free = 0;
-  if(!head){ // first malloc
-    head = b;
-    tail = b;
-  }
-  else{
-    tail->next = b;
-    b->prev = tail;
-    tail = b;
-  }
+  b = create_block(size);
   return b+1;
 }
 
-void ff_free(void* p){
-    if (!p){
-      return;
+void ff_free(void* ptr){
+  if(!ptr){
+    return;
+  }
+  struct Block* b = (struct Block*)ptr - 1; // locate block
+  assert(!b->free);
+  b->free = 1;
+  // insert b to LL
+  if(!head){ // empty LL
+    assert(!tail);
+    head = b;
+    tail = b;
+  }else{
+    // LL tracks free blocks by their physical address order
+    struct Block* p = tail;
+    while(p){
+      if(p < b){ // stop until the node's physical address is smaller than b
+        break;
+      }
+      p = p->prev;
     }
-    struct Block* b = (struct Block*)p - 1; // locate block
-    assert(b->free == 0);
-    b->free = 1;
-    if(b->prev && b->prev->free){ // merge with prev
-      b->prev->size += b->size + sizeof(struct Block*);
-      b->prev->next = b->next;
-      b->next->prev = b->prev;
-      b = b->prev;
+    if(p){
+      insert_block(p, b);
+    }else{ // scanned to the end
+      // insert p into head
+      head->prev = b;
+      b->next = head;
+      b->prev = NULL;
+      head = b;
     }
-    if(b->next && b->next->free){ // merge with next
-      b->size += b->next->size + sizeof(struct Block*);
-      b->next = b->next->next;
-      b->next->prev = b;
-    }
+  }
+  merge_blocks(b, b->next);
+  merge_blocks(b->prev, b);
 }
 
 //Best Fit malloc/free
@@ -65,39 +120,27 @@ void *bf_malloc(size_t size){
   struct Block* b = head;
   struct Block* best = NULL;
   while(b){
-    if( b->free && b->size >= size ){ // found a free block big enough
+    assert(b->free); // LL only tracks free blocks
+    if( b->size >= size ){ // found a free block big enough
       // TODO: can split this block to save space
       if(!best || b->size < best->size){
         best = b;
+      }
+      if(best->size == size){
+        break;
       }
     }
     b = b->next;
   }
   if(best){
-    best->free = 0;
+    remove_block(best);
     return best+1;
   }
   // no available block, get a new one
-  // initialize the block
-  b = sbrk(size + sizeof(struct Block)); // request space from kernel
-  if ((int)b == -1) { // sbrk failed
-    return NULL;
-  }
-  b->size = size;
-  b->next = NULL;
-  b->prev = NULL;
-  b->free = 0;
-  if(!head){ // first malloc
-    head = b;
-    tail = b;
-  }
-  else{
-    tail->next = b;
-    b->prev = tail;
-    tail = b;
-  }
-  return b+1;
+  b = create_block(size);
+  return b+1; // user's space starts from (void*)b + BLK_SZ
 }
+
 void bf_free(void* p){
   ff_free(p);
 }
