@@ -21,8 +21,9 @@ void insert_block(struct Block* p, struct Block* b);
 void remove_block(struct Block* b);
 void merge_blocks(struct Block* a, struct Block* b);
 struct Block* create_block(size_t size);
-//unsigned long data_segment_size = 0;
-//unsigned long data_segment_free_space_size = 0;
+
+unsigned long seg_sz = 0;
+unsigned long seg_free_sz = 0;
 
 unsigned long get_data_segment_size(); //in bytes
 unsigned long get_data_segment_free_space_size(); //in bytes

@@ -4,6 +4,7 @@
 
 struct Block* create_block(size_t size){
   // initialize the block
+  seg_sz += size + BLK_SZ;
   struct Block* b = sbrk(size + BLK_SZ); // request space from kernel
   if ((int)b == -1) { // sbrk failed
     return NULL;
@@ -12,19 +13,13 @@ struct Block* create_block(size_t size){
   b->next = NULL;
   b->prev = NULL;
   b->free = 0;
-  // insert the block into LL
-  if(!head){ // empty LL
-    head = b;
-    tail = b;
-  }else{
-    insert_block(tail, b);
-  }
   return b;
 }
 
 void merge_blocks(struct Block* a, struct Block* b){
   if( a && b && (void*)a + a->size + BLK_SZ == (void*)b){
     a->size += b->size + BLK_SZ;
+    seg_free_sz += BLK_SZ;
     remove_block(b);
   }
 }
@@ -68,6 +63,7 @@ void *ff_malloc(size_t size){
     if( b->size >= size ){ // found a free block big enough
       // TODO: can split this block to save space
       remove_block(b);
+      seg_free_sz -= b->size;
       return b+1;
     }
     b = b->next;
@@ -84,9 +80,12 @@ void ff_free(void* ptr){
   struct Block* b = (struct Block*)ptr - 1; // locate block
   assert(!b->free);
   b->free = 1;
+  seg_free_sz += b->size;
   // insert b to LL
   if(!head){ // empty LL
     assert(!tail);
+    b->prev = NULL;
+    b->next = NULL;
     head = b;
     tail = b;
   }else{
@@ -134,6 +133,7 @@ void *bf_malloc(size_t size){
   }
   if(best){
     remove_block(best);
+    seg_free_sz -= best->size;
     return best+1;
   }
   // no available block, get a new one
@@ -146,23 +146,9 @@ void bf_free(void* p){
 }
 
 unsigned long get_data_segment_size(){
-  struct Block* b = head;
-  int sum = 0;
-  while(b){
-    sum += b->size;
-    b = b->next;
-  }
-  return sum;
+  return seg_sz;
 }
 
 unsigned long get_data_segment_free_space_size(){
-  struct Block* b = head;
-  int sum = 0;
-  while(b){
-    if(b->free){
-      sum += b->size;
-    }
-    b = b->next;
-  }
-  return sum;
+  return seg_free_sz;
 }
