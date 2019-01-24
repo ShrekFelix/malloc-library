@@ -135,6 +135,8 @@ int main(int argc, char *argv[])
   FREE(array[8]);
   FREE(array[9]);
 
+  printf("%d / %d\n",seg_free_sz,seg_sz);
+  
   if (sum == expected_sum) {
     printf("Calculated expected value of %d\n", sum);
     printf("Test passed\n");
