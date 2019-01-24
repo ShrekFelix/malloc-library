@@ -80,11 +80,11 @@ int main(int argc, char *argv[])
     unsigned malloc_set = i % 2;
     for (j=0; j < NUM_ITEMS; j+=50) {
       for (k=0; k < 50; k++) {
-	unsigned item_to_free = free_list[j+k];
-	FREE(malloc_items[malloc_set][item_to_free].address);
+        unsigned item_to_free = free_list[j+k];
+        FREE(malloc_items[malloc_set][item_to_free].address);
       } //for k
       for (k=0; k < 50; k++) {
-	malloc_items[1-malloc_set][j+k].address = (int *)MALLOC(malloc_items[1-malloc_set][j+k].bytes);
+        malloc_items[1-malloc_set][j+k].address = (int *)MALLOC(malloc_items[1-malloc_set][j+k].bytes);
       } //for k
     } //for j
   } //for i
