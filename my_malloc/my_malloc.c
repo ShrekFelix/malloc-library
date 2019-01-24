@@ -16,24 +16,15 @@ struct Block* create_block(size_t size){
   return b;
 }
 
+struct Block* next_seg(struct Block* b){
+  return (void*)b + b->size + BLK_SZ;
+}
+
 void merge_blocks(struct Block* a, struct Block* b){
-  if( a && b && (void*)a + a->size + BLK_SZ == (void*)b){
+  if( a && b && b==next_seg(a)){
     a->size += b->size + BLK_SZ;
     seg_free_sz += BLK_SZ;
     remove_block(b);
-  }
-}
-
-// insert b into LL right after p
-void insert_block(struct Block* p, struct Block* b){
-  assert(head && tail);
-  b->next = p->next;
-  b->prev = p;
-  p->next = b;
-  if(b->next){
-    b->next->prev = b;
-  }else{
-    tail = b;
   }
 }
 
@@ -81,30 +72,35 @@ void ff_free(void* ptr){
   assert(!b->free);
   b->free = 1;
   seg_free_sz += b->size;
-  // insert b to LL
   if(!head){ // empty LL
     assert(!tail);
-    b->prev = NULL;
-    b->next = NULL;
     head = b;
     tail = b;
+    b->prev = NULL;
+    b->next = NULL;
+  }else if(b > tail){
+    // b should be physically the last free block in the LL
+    // insert b to end of LL
+    tail->next = b;
+    b->prev = tail;
+    b->next = NULL;
+    tail = b;
   }else{
-    // LL tracks free blocks by their physical address order
-    struct Block* p = tail;
+    // look for a free block physically after b
+    struct Block* p = next_seg(b);
     while(p){
-      if(p < b){ // stop until the node's physical address is smaller than b
+      if(p->free){
+        b->prev = p->prev;
+        b->next = p;
+        p->prev = b;
+        if(b->prev){
+          b->prev->next = b;
+        }else{
+          head = b;
+        }
         break;
       }
-      p = p->prev;
-    }
-    if(p){
-      insert_block(p, b);
-    }else{ // scanned to the end
-      // insert p into head
-      head->prev = b;
-      b->next = head;
-      b->prev = NULL;
-      head = b;
+      p = next_seg(p);
     }
   }
   merge_blocks(b, b->next);

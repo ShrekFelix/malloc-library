@@ -20,6 +20,7 @@ void bf_free(void *ptr);
 void insert_block(struct Block* p, struct Block* b);
 void remove_block(struct Block* b);
 void merge_blocks(struct Block* a, struct Block* b);
+void* next_seg(struct Block* b);
 struct Block* create_block(size_t size);
 
 unsigned long seg_sz = 0;
