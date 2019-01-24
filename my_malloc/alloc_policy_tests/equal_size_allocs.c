@@ -51,12 +51,9 @@ int main(int argc, char *argv[])
   for (i=0; i < NUM_ITEMS; i++) {
     FREE(array[i]);
   } //for i
-  printf("1\n");
-  //Start Time
+    //Start Time
   clock_gettime(CLOCK_MONOTONIC, &start_time);
-  printf("2\n");
   for (i=0; i < NUM_ITERS; i++) {
-    printf("%d\n",i);
     for (j=0; j < 1000; j++) {
       array[j] = (int *)MALLOC(ALLOC_SIZE);
     } //for j

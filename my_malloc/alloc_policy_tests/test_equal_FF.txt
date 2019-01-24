@@ -1,0 +1,2 @@
+Execution Time = 634.581069 seconds
+Fragmentation  = 0.360000
