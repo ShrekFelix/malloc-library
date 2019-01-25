@@ -54,7 +54,7 @@ void *ff_malloc(size_t size){
     if( b->size >= size ){ // found a free block big enough
       // TODO: can split this block to save space
       remove_block(b);
-      seg_free_sz -= b->size;
+      seg_free_sz -= b->size+BLK_SZ;
       return b+1;
     }
     b = b->next;
@@ -71,7 +71,7 @@ void ff_free(void* ptr){
   struct Block* b = (struct Block*)ptr - 1; // locate block
   assert(!b->free);
   b->free = 1;
-  seg_free_sz += b->size;
+  seg_free_sz += b->size+BLK_SZ;
   if(!head){ // empty LL
     assert(!tail);
     head = b;
@@ -129,7 +129,7 @@ void *bf_malloc(size_t size){
   }
   if(best){
     remove_block(best);
-    seg_free_sz -= best->size;
+    seg_free_sz -= best->size+BLK_SZ;
     return best+1;
   }
   // no available block, get a new one
