@@ -1,4 +1,5 @@
 #include "my_malloc.h"
+#include <stdio.h>
 #include <assert.h>
 #define BLK_SZ (sizeof(Block))
 
@@ -14,6 +15,7 @@ Block* create_block(size_t size){
   b->prev = NULL;
   b->free = 0;
   extend_physLL(b);
+  return b;
 }
 
 void extend_freeLL(Block* b){
@@ -23,6 +25,8 @@ void extend_freeLL(Block* b){
   b->free = 1;
   if(tail){
     tail->next = b;
+  }else{
+    head = b;
   }
   b->prev = tail;
   b->next = NULL;
@@ -31,11 +35,12 @@ void extend_freeLL(Block* b){
 void extend_physLL(Block* b){
   if(phys_tail){
     phys_tail->phys_next = b;
+  }else{
+    phys_head = b;
   }
   b->phys_prev = phys_tail;
   b->phys_next = NULL;
   phys_tail = b;
-  return b;
 }
 
 void remove_block_freeLL(Block* b){
@@ -69,9 +74,8 @@ void remove_block_physLL(Block* b){
   b->phys_next = NULL;
 }
 
-
 void merge_blocks(Block* a, Block* b){
-  if( a && b && a->phys_next==b){
+  if( a && b && a->free && b->free){
     a->size += b->size + BLK_SZ;
     remove_block_freeLL(b);
     remove_block_physLL(b);
@@ -116,8 +120,8 @@ void bf_free(void* ptr){
   }
   Block* b = (Block*)ptr - 1; // locate block
   extend_freeLL(b);
-  merge_blocks(b, b->next);
-  merge_blocks(b->prev, b);
+  merge_blocks(b, b->phys_next);
+  merge_blocks(b->phys_prev, b);
 }
 
 unsigned long get_data_segment_size(){
