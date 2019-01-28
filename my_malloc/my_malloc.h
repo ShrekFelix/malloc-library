@@ -1,27 +1,30 @@
 #include <stdlib.h>
 
-struct Block {
-  struct Block* next;
-  struct Block* prev;
+typedef struct _Block{
+  struct _Block* next;
+  struct _Block* prev;
+  struct _Block* phys_next;
+  struct _Block* phys_prev;
   size_t size;
   int free;
-};
+} Block;
 
-struct Block* head = NULL;
-struct Block* tail = NULL;
+Block* head = NULL;
+Block* tail = NULL;
+Block* phys_head = NULL;
+Block* phys_tail = NULL;
 
-//First Fit malloc/free
-void* ff_malloc(size_t size);
-void ff_free(void *ptr);
 //Best Fit malloc/free
 void* bf_malloc(size_t size);
 void bf_free(void *ptr);
 
-void insert_block(struct Block* p, struct Block* b);
-void remove_block(struct Block* b);
-void merge_blocks(struct Block* a, struct Block* b);
-struct Block* next_seg(struct Block* b);
-struct Block* create_block(size_t size);
+void insert_block(Block* p, Block* b);
+void extend_freeLL(Block* b);
+void extend_physLL(Block* b);
+void remove_block_freeLL(Block* b);
+void remove_block_physLL(Block* b);
+void merge_blocks(Block* a, Block* b);
+Block* create_block(size_t size);
 
 unsigned long seg_sz = 0;
 unsigned long seg_free_sz = 0;
