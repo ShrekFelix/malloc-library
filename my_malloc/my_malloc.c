@@ -124,10 +124,40 @@ void bf_free(void* ptr){
   merge_blocks(b->phys_prev, b);
 }
 
-unsigned long get_data_segment_size(){
-  return seg_sz;
+void freeLL_summary(){
+  printf("freeLL\n");
+  Block* p = head;
+  while(p){
+    printf("%p : %lu\n",p,p->size);
+    p = p->next;
+  }
+  printf("\n");
+}
+void physLL_summary(){
+  printf("physLL\n");
+  Block* p = phys_head;
+  while(p){
+    printf("%p : %d %lu\n",p,p->free,p->size);
+    p = p->phys_next;
+  }
+  printf("\n");
 }
 
 unsigned long get_data_segment_free_space_size(){
-  return seg_free_sz;
+  Block* p = head;
+  unsigned long sum = 0;
+  while(p){
+    sum += p->size;
+    p = p->next;
+  }
+  return sum;
+}
+unsigned long get_data_segment_size(){
+  Block* p = phys_head;
+  unsigned long sum = 0;
+  while(p){
+    sum += p->size;
+    p = p->phys_next;
+  }
+  return sum;;
 }

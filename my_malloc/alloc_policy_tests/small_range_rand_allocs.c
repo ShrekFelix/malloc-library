@@ -3,8 +3,8 @@
 #include <time.h>
 #include "my_malloc.h"
 
-#define NUM_ITERS    100
-#define NUM_ITEMS    10000
+#define NUM_ITERS    10
+#define NUM_ITEMS    100
 
 #ifdef FF
 #define MALLOC(sz) ff_malloc(sz)
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
   unsigned long data_segment_free_space;
   struct timespec start_time, end_time;
 
-  srand(0);
+  srand(2019);
 
   const unsigned chunk_size = 32;
   const unsigned min_chunks = 4;
@@ -71,21 +71,28 @@ int main(int argc, char *argv[])
   for (i=0; i < NUM_ITEMS; i++) {
     malloc_items[0][i].address = (int *)MALLOC(malloc_items[0][i].bytes);
   } //for i
-
+  physLL_summary();
+  freeLL_summary();
 
   //Start Time
   clock_gettime(CLOCK_MONOTONIC, &start_time);
 
   for (i=0; i < NUM_ITERS; i++) {
+    printf("i=%d\n",i);
     unsigned malloc_set = i % 2;
     for (j=0; j < NUM_ITEMS; j+=50) {
       for (k=0; k < 50; k++) {
         unsigned item_to_free = free_list[j+k];
         FREE(malloc_items[malloc_set][item_to_free].address);
       } //for k
+      printf("j=%d\n",j);
+      physLL_summary();
+      freeLL_summary();
       for (k=0; k < 50; k++) {
         malloc_items[1-malloc_set][j+k].address = (int *)MALLOC(malloc_items[1-malloc_set][j+k].bytes);
       } //for k
+      physLL_summary();
+      freeLL_summary();
     } //for j
   } //for i
 
@@ -100,9 +107,17 @@ int main(int argc, char *argv[])
   printf("Execution Time = %f seconds\n", elapsed_ns / 1e9);
   printf("Fragmentation  = %f\n", (float)data_segment_free_space/(float)data_segment_size);
 
+
+  physLL_summary();
+  freeLL_summary();
+  printf("\n");
   for (i=0; i < NUM_ITEMS; i++) {
     FREE(malloc_items[0][i].address);
   } //for i
+
+
+  physLL_summary();
+  freeLL_summary();
 
   return 0;
 }
