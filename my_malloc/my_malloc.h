@@ -20,6 +20,7 @@ void bf_free(void *ptr);
 
 void insert_block(Block* p, Block* b);
 void extend_freeLL(Block* b);
+void insert_physLL(Block* p, Block* b);
 void extend_physLL(Block* b);
 void remove_block_freeLL(Block* b);
 void remove_block_physLL(Block* b);

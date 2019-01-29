@@ -75,5 +75,8 @@ int main(int argc, char *argv[])
   FREE(array[8]);
   FREE(array[9]);
 
+  freeLL_summary();
+  physLL_summary();
+
   return 0;
 }

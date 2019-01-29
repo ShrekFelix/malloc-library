@@ -14,14 +14,11 @@ Block* create_block(size_t size){
   b->next = NULL;
   b->prev = NULL;
   b->free = 0;
-  extend_physLL(b);
+  insert_physLL(phys_tail,b);
   return b;
 }
 
 void extend_freeLL(Block* b){
-  assert(!b->free);
-  assert(!b->prev);
-  assert(!b->next);
   b->free = 1;
   if(tail){
     tail->next = b;
@@ -31,6 +28,22 @@ void extend_freeLL(Block* b){
   b->prev = tail;
   b->next = NULL;
   tail = b;
+}
+void insert_physLL(Block* p, Block* b){
+  if(!p){
+    assert(!phys_head && !phys_tail);
+    phys_head = b;
+    phys_tail = b;
+  }else{
+    if(phys_tail == p){
+      phys_tail = b;
+    }else{
+      p->phys_next->phys_prev = b;
+    }
+    b->phys_next = p->phys_next;
+    b->phys_prev = p;
+    p->phys_next = b;
+  }
 }
 void extend_physLL(Block* b){
   if(phys_tail){
@@ -106,14 +119,18 @@ void *bf_malloc(size_t size){
     if(best->size > BLK_SZ + size){
       // split the block
       Block* nb = (void*) best + BLK_SZ + size;
-      nb->size = best->size - size;
+      nb->size = best->size - size - BLK_SZ;
+      best->size -= nb->size + BLK_SZ;
       extend_freeLL(nb);
+      insert_physLL(best,nb);
+      /*
       nb->phys_next = best->phys_next;
       nb->phys_prev = best;
       best->phys_next = nb;
       if(nb->phys_next){
         nb->phys_next->phys_prev = nb;
       }
+      */
     }
     remove_block_freeLL(best);
     return best+1;
