@@ -103,6 +103,18 @@ void *bf_malloc(size_t size){
     b = b->next;
   }
   if(best){
+    if(best->size > BLK_SZ + size){
+      // split the block
+      Block* nb = (void*) best + BLK_SZ + size;
+      nb->size = best->size - size;
+      extend_freeLL(nb);
+      nb->phys_next = best->phys_next;
+      nb->phys_prev = best;
+      best->phys_next = nb;
+      if(nb->phys_next){
+        nb->phys_next->phys_prev = nb;
+      }
+    }
     remove_block_freeLL(best);
     return best+1;
   }
