@@ -2,7 +2,25 @@
 #include <stdio.h>
 #include <assert.h>
 #define BLK_SZ (sizeof(Block))
-
+/*
+void scan(int i,int j,int k){
+  Block* p = head;
+  while(p){
+    if(p==(Block *) 0xa30333d6b){
+      printf("i,j,k = %d%d%d\n\n\n",i,j,k);
+    }
+    p = p->next;
+  }
+}
+*/
+Block* initialize_block(Block* b, size_t size){
+  b->size = size;
+  b->next = NULL;
+  b->prev = NULL;
+  b->free = 0;
+  return b;
+}
+/*
 Block* create_block(size_t size){
   // initialize the block
   Block* b = sbrk(size + BLK_SZ); // request space from kernel
@@ -17,7 +35,7 @@ Block* create_block(size_t size){
   insert_physLL(phys_tail,b);
   return b;
 }
-
+*/
 void extend_freeLL(Block* b){
   b->free = 1;
   if(tail){
@@ -30,10 +48,12 @@ void extend_freeLL(Block* b){
   tail = b;
 }
 void insert_physLL(Block* p, Block* b){
-  if(!p){
+  if(!p){ // called insert_physLL(phys_tail, b) when phys_tall==NULL
     assert(!phys_head && !phys_tail);
     phys_head = b;
     phys_tail = b;
+    b->phys_next = NULL;
+    b->phys_prev = NULL;
   }else{
     if(phys_tail == p){
       phys_tail = b;
@@ -45,6 +65,7 @@ void insert_physLL(Block* p, Block* b){
     p->phys_next = b;
   }
 }
+/*
 void extend_physLL(Block* b){
   if(phys_tail){
     phys_tail->phys_next = b;
@@ -55,7 +76,7 @@ void extend_physLL(Block* b){
   b->phys_next = NULL;
   phys_tail = b;
 }
-
+*/
 void remove_block_freeLL(Block* b){
   b->free = 0;
   if(b != head){
@@ -103,9 +124,8 @@ void *bf_malloc(size_t size){
   Block* b = head;
   Block* best = NULL;
   while(b){
-    assert(b->free); // LL only tracks free blocks
+    assert(b->free);
     if( b->size >= size ){ // found a free block big enough
-      // TODO: can split this block to save space
       if(!best || b->size < best->size){
         best = b;
       }
@@ -118,6 +138,12 @@ void *bf_malloc(size_t size){
   if(best){
     if(best->size > BLK_SZ + size){
       // split the block
+      Block* addr = (void*) best + best->size - size;
+      Block* nb = initialize_block(addr, size);
+      insert_physLL(best, nb);
+      best->size -= size + BLK_SZ;
+      return nb+1;
+      /*
       Block* nb = (void*) best + BLK_SZ + size;
       nb->size = best->size - size - BLK_SZ;
       best->size -= nb->size + BLK_SZ;
@@ -131,16 +157,16 @@ void *bf_malloc(size_t size){
         nb->phys_next->phys_prev = nb;
       }
       */
+    }else{
+      remove_block_freeLL(best);
+      return best+1;
     }
-    remove_block_freeLL(best);
-    return best+1;
+  }else{
+    Block* addr = sbrk(size + BLK_SZ);
+    Block* nb = initialize_block(addr, size);
+    insert_physLL(phys_tail, nb);
+    return nb+1;
   }
-  // no available block, get a new one
-  b = create_block(size);
-  if(!b){ // sbrk failed
-    return NULL;
-  }
-  return b+1; // jump off header
 }
 
 void bf_free(void* ptr){
@@ -171,6 +197,9 @@ void physLL_summary(){
   }
   printf("\n");
 }
+
+
+
 
 unsigned long get_data_segment_free_space_size(){
   Block* p = head;
