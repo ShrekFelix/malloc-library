@@ -2,17 +2,9 @@
 #include <stdio.h>
 #include <assert.h>
 #define BLK_SZ (sizeof(Block))
-/*
-void scan(int i,int j,int k){
-  Block* p = head;
-  while(p){
-    if(p==(Block *) 0xa30333d6b){
-      printf("i,j,k = %d%d%d\n\n\n",i,j,k);
-    }
-    p = p->next;
-  }
-}
-*/
+
+pthread_rwlock_init(&lock, NULL);
+
 Block* initialize_block(Block* b, size_t size){
   b->size = size;
   b->next = NULL;
@@ -20,22 +12,7 @@ Block* initialize_block(Block* b, size_t size){
   b->free = 0;
   return b;
 }
-/*
-Block* create_block(size_t size){
-  // initialize the block
-  Block* b = sbrk(size + BLK_SZ); // request space from kernel
-  if ((int)b == -1) { // sbrk failed
-    perror("sbrk failed\n");
-    return NULL;
-  }
-  b->size = size;
-  b->next = NULL;
-  b->prev = NULL;
-  b->free = 0;
-  insert_physLL(phys_tail,b);
-  return b;
-}
-*/
+
 void extend_freeLL(Block* b){
   b->free = 1;
   if(tail){
@@ -47,6 +24,7 @@ void extend_freeLL(Block* b){
   b->next = NULL;
   tail = b;
 }
+
 void insert_physLL(Block* p, Block* b){
   if(!p){ // called insert_physLL(phys_tail, b) when phys_tall==NULL
     assert(!phys_head && !phys_tail);
@@ -65,18 +43,7 @@ void insert_physLL(Block* p, Block* b){
     p->phys_next = b;
   }
 }
-/*
-void extend_physLL(Block* b){
-  if(phys_tail){
-    phys_tail->phys_next = b;
-  }else{
-    phys_head = b;
-  }
-  b->phys_prev = phys_tail;
-  b->phys_next = NULL;
-  phys_tail = b;
-}
-*/
+
 void remove_block_freeLL(Block* b){
   b->free = 0;
   if(b != head){
@@ -117,59 +84,58 @@ void merge_blocks(Block* a, Block* b){
 }
 
 //Best Fit malloc/free
-void *bf_malloc(size_t size){
+void *ts_malloc_lock(size_t size){
   if (size <= 0) {
     return NULL;
   }
-  Block* b = head;
-  Block* best = NULL;
-  while(b){
-    assert(b->free);
-    if( b->size >= size ){ // found a free block big enough
-      if(!best || b->size < best->size){
-        best = b;
+  while(1){
+    pthread_rwlock_rdlock(&lock);
+    Block* b = head;
+    Block* best = NULL;
+    while(b){
+      assert(b->free);
+      if( b->size >= size ){ // found a free block big enough
+        if(!best || b->size < best->size){
+          best = b;
+        }
+        if(best->size == size){
+          break;
+        }
       }
-      if(best->size == size){
-        break;
-      }
+      b = b->next;
     }
-    b = b->next;
-  }
-  if(best){
-    if(best->size > BLK_SZ + size){
-      // split the block
-      Block* addr = (void*) best + best->size - size;
-      Block* nb = initialize_block(addr, size);
-      insert_physLL(best, nb);
-      best->size -= size + BLK_SZ;
-      return nb+1;
-      /*
-      Block* nb = (void*) best + BLK_SZ + size;
-      nb->size = best->size - size - BLK_SZ;
-      best->size -= nb->size + BLK_SZ;
-      extend_freeLL(nb);
-      insert_physLL(best,nb);
-      /*
-      nb->phys_next = best->phys_next;
-      nb->phys_prev = best;
-      best->phys_next = nb;
-      if(nb->phys_next){
-        nb->phys_next->phys_prev = nb;
+    pthread_rwlock_unlock(&lock);
+    pthread_rwlock_wrlock(&lock);
+    if(!best || !best->free || best->size < size){
+      pthread_rwlock_unlock(&lock);
+      continue;
+    }
+    if(best){
+      if(best->size > BLK_SZ + size){
+        // split the block
+        Block* addr = (void*) best + best->size - size;
+        Block* nb = initialize_block(addr, size);
+        insert_physLL(best, nb);
+        best->size -= size + BLK_SZ;
+        pthread_rwlock_unlock(&lock);
+        return nb+1;
+      }else{
+        remove_block_freeLL(best);
+        pthread_rwlock_unlock(&lock);
+        return best+1;
       }
-      */
     }else{
-      remove_block_freeLL(best);
-      return best+1;
+      Block* addr = sbrk(size + BLK_SZ);
+      Block* nb = initialize_block(addr, size);
+      insert_physLL(phys_tail, nb);
+      pthread_rwlock_unlock(&lock);
+      return nb+1;
     }
-  }else{
-    Block* addr = sbrk(size + BLK_SZ);
-    Block* nb = initialize_block(addr, size);
-    insert_physLL(phys_tail, nb);
-    return nb+1;
   }
 }
 
-void bf_free(void* ptr){
+void ts_free_lock(void* ptr){
+  pthread_rwlock_wrlock(&lock);
   if(!ptr){
     return;
   }
@@ -177,6 +143,7 @@ void bf_free(void* ptr){
   extend_freeLL(b);
   merge_blocks(b, b->phys_next);
   merge_blocks(b->phys_prev, b);
+  pthread_rwlock_unlock(&lock);
 }
 
 void freeLL_summary(){
@@ -197,9 +164,6 @@ void physLL_summary(){
   }
   printf("\n");
 }
-
-
-
 
 unsigned long get_data_segment_free_space_size(){
   Block* p = head;
