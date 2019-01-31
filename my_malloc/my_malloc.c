@@ -3,8 +3,6 @@
 #include <assert.h>
 #define BLK_SZ (sizeof(Block))
 
-pthread_rwlock_init(&lock, NULL);
-
 Block* initialize_block(Block* b, size_t size){
   b->size = size;
   b->next = NULL;
