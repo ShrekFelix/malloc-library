@@ -86,54 +86,46 @@ void *ts_malloc_lock(size_t size){
   if (size <= 0) {
     return NULL;
   }
-  while(1){
-    pthread_rwlock_rdlock(&lock);
-    Block* b = head;
-    Block* best = NULL;
-    while(b){
-      assert(b->free);
-      if( b->size >= size ){ // found a free block big enough
-        if(!best || b->size < best->size){
-          best = b;
-        }
-        if(best->size == size){
-          break;
-        }
+  pthread_mutex_lock(&lock);
+  Block* b = head;
+  Block* best = NULL;
+  while(b){
+    assert(b->free);
+    if( b->size >= size ){ // found a free block big enough
+      if(!best || b->size < best->size){
+	best = b;
       }
-      b = b->next;
-    }
-    pthread_rwlock_unlock(&lock);
-    pthread_rwlock_wrlock(&lock);
-    if(!best || !best->free || best->size < size){
-      pthread_rwlock_unlock(&lock);
-      continue;
-    }
-    if(best){
-      if(best->size > BLK_SZ + size){
-        // split the block
-        Block* addr = (void*) best + best->size - size;
-        Block* nb = initialize_block(addr, size);
-        insert_physLL(best, nb);
-        best->size -= size + BLK_SZ;
-        pthread_rwlock_unlock(&lock);
-        return nb+1;
-      }else{
-        remove_block_freeLL(best);
-        pthread_rwlock_unlock(&lock);
-        return best+1;
+      if(best->size == size){
+	break;
       }
-    }else{
-      Block* addr = sbrk(size + BLK_SZ);
+    }
+    b = b->next;
+  }
+  if(best){
+    if(best->size > BLK_SZ + size){
+      // split the block
+      Block* addr = (void*) best + best->size - size;
       Block* nb = initialize_block(addr, size);
-      insert_physLL(phys_tail, nb);
-      pthread_rwlock_unlock(&lock);
+      insert_physLL(best, nb);
+      best->size -= size + BLK_SZ;
+      pthread_mutex_unlock(&lock);
       return nb+1;
+    }else{
+      remove_block_freeLL(best);
+      pthread_mutex_unlock(&lock);
+      return best+1;
     }
+  }else{
+    Block* addr = sbrk(size + BLK_SZ);
+    Block* nb = initialize_block(addr, size);
+    insert_physLL(phys_tail, nb);
+    pthread_mutex_unlock(&lock);
+    return nb+1;
   }
 }
 
 void ts_free_lock(void* ptr){
-  pthread_rwlock_wrlock(&lock);
+  pthread_mutex_lock(&lock);
   if(!ptr){
     return;
   }
@@ -141,7 +133,7 @@ void ts_free_lock(void* ptr){
   extend_freeLL(b);
   merge_blocks(b, b->phys_next);
   merge_blocks(b->phys_prev, b);
-  pthread_rwlock_unlock(&lock);
+  pthread_mutex_unlock(&lock);
 }
 
 void freeLL_summary(){

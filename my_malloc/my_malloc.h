@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-pthread_rwlock_t lock = PTHREAD_RWLOCK_INITIALIZER;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct _Block{
   struct _Block* next;
