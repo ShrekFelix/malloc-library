@@ -1,19 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include "my_malloc.h"
+#include <my_malloc.h>
 
 #define NUM_ITERS    100
 #define NUM_ITEMS    10000
 
-#ifdef FF
-#define MALLOC(sz) ff_malloc(sz)
-#define FREE(p)    ff_free(p)
-#endif
-#ifdef BF
-#define MALLOC(sz) bf_malloc(sz)
-#define FREE(p)    bf_free(p)
-#endif
+#define MALLOC(sz) ts_malloc_lock(sz)
+#define FREE(p)    ts_free_lock(p)
 
 
 double calc_time(struct timeval start, struct timeval end) {
