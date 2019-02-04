@@ -33,13 +33,28 @@ Block* initialize_block(Block*b, size_t size);
 void *ts_malloc_lock(size_t size);
 void ts_free_lock(void *ptr);
 
-//Thread Safe malloc/free: non-locking version
-void *ts_malloc_nolock(size_t size);
-void ts_free_nolock(void *ptr);
-
 unsigned long get_data_segment_size(); //in bytes
 unsigned long get_data_segment_free_space_size(); //in bytes
 
 // debug
 void physLL_summary();
 void freeLL_summary();
+
+
+struct Block2 {
+  struct Block2* next;
+  struct Block2* prev;
+  size_t size;
+  int free;
+};
+
+__thread struct Block2* head2 = NULL;
+__thread struct Block2* tail2 = NULL;
+
+void *ts_malloc_nolock(size_t size);
+void ts_free_nolock(void *ptr);
+
+void remove_block2(struct Block2* b);
+void merge_blocks2(struct Block2* a, struct Block2* b);
+struct Block2* next_seg2(struct Block2* b);
+struct Block2* create_block2(size_t size);

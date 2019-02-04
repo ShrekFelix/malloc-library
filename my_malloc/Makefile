@@ -1,13 +1,10 @@
 CC=gcc
 CFLAGS=-ggdb3 -O3 -fPIC
 
-all: lib lib_nolock
+all: lib
 
 lib: my_malloc.o
 	$(CC) $(CFLAGS) -shared -o libmymalloc.so my_malloc.o
-
-lib_nolock: my_malloc_nolock.o
-	$(CC) $(CFLAGS) -shared -o libmymalloc_nolock.so my_malloc_nolock.o
 
 my_malloc.o: my_malloc.c my_malloc.h
 	$(CC) $(CFLAGS) -c -o $@ $< 

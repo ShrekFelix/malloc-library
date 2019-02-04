@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <unistd.h>
-#include "my_malloc_nolock.h"
+#include "my_malloc.h"
 
 #ifdef LOCK_VERSION
 #define MALLOC(sz) ts_malloc_lock(sz)
