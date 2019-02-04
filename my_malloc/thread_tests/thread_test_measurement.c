@@ -3,7 +3,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <unistd.h>
-#include "my_malloc.h"
+#include "my_malloc_nolock.h"
 
 #ifdef LOCK_VERSION
 #define MALLOC(sz) ts_malloc_lock(sz)
