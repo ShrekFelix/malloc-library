@@ -33,11 +33,13 @@ void insert_freeLL(Block* p, Block* b){
       b->next = NULL;
       b->prev = NULL;
     }else{
+      head_loc->prev = b;
       b->next = head_loc;
       b->prev = NULL;
       head_loc = b;
     }
   }else{
+    assert(p<b);
     if(tail_loc == p){
       tail_loc = b;
     }else{
@@ -164,7 +166,7 @@ void ts_free_lock(void* ptr){
 
 void freeLL_summary(){
   printf("freeLL\n");
-  Block* p = head;
+  Block* p = head_loc;
   while(p){
     printf("%p : %lu\n",p,p->size);
     p = p->next;
@@ -277,7 +279,6 @@ void ts_free_nolock(void* ptr){
     p = p->prev;
   }
   insert_freeLL(p, b);
-  if(next_seg)
   merge_blocks_loc(b, b->next);
   merge_blocks_loc(b->prev, b);
 }
