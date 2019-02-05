@@ -40,21 +40,12 @@ unsigned long get_data_segment_free_space_size(); //in bytes
 void physLL_summary();
 void freeLL_summary();
 
-
-struct Block2 {
-  struct Block2* next;
-  struct Block2* prev;
-  size_t size;
-  int free;
-};
-
-__thread struct Block2* head2 = NULL;
-__thread struct Block2* tail2 = NULL;
+__thread Block* head_loc = NULL;
+__thread Block* tail_loc = NULL;
 
 void *ts_malloc_nolock(size_t size);
 void ts_free_nolock(void *ptr);
 
-void remove_block2(struct Block2* b);
-void merge_blocks2(struct Block2* a, struct Block2* b);
-struct Block2* next_seg2(struct Block2* b);
-struct Block2* create_block2(size_t size);
+Block* next_seg(Block* b);
+void merge_blocks_loc(Block* a, Block* b);
+void remove_block_loc(Block* b);
