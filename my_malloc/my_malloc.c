@@ -3,18 +3,11 @@
 #include <assert.h>
 #define BLK_SZ (sizeof(Block))
 
-Block* create_block(size_t size){
-  // initialize the block
-  Block* b = sbrk(size + BLK_SZ); // request space from kernel
-  if ((int)b == -1) { // sbrk failed
-    perror("sbrk failed\n");
-    return NULL;
-  }
+Block* initialize_block(Block* b, size_t size){
   b->size = size;
   b->next = NULL;
   b->prev = NULL;
   b->free = 0;
-  insert_physLL(phys_tail,b);
   return b;
 }
 
@@ -29,11 +22,42 @@ void extend_freeLL(Block* b){
   b->next = NULL;
   tail = b;
 }
-void insert_physLL(Block* p, Block* b){
+
+void insert_freeLL(Block* p, Block* b){
+  b->free = 1;
   if(!p){
+    if(!head_loc){
+      assert(!tail_loc);
+      head_loc = b;
+      tail_loc = b;
+      b->next = NULL;
+      b->prev = NULL;
+    }else{
+      head_loc->prev = b;
+      b->next = head_loc;
+      b->prev = NULL;
+      head_loc = b;
+    }
+  }else{
+    assert(p<b);
+    if(tail_loc == p){
+      tail_loc = b;
+    }else{
+      p->next->prev = b;
+    }
+    b->next = p->next;
+    b->prev = p;
+    p->next = b;
+  }
+}
+
+void insert_physLL(Block* p, Block* b){
+  if(!p){ // called insert_physLL(phys_tail, b) when phys_tall==NULL
     assert(!phys_head && !phys_tail);
     phys_head = b;
     phys_tail = b;
+    b->phys_next = NULL;
+    b->phys_prev = NULL;
   }else{
     if(phys_tail == p){
       phys_tail = b;
@@ -44,16 +68,6 @@ void insert_physLL(Block* p, Block* b){
     b->phys_prev = p;
     p->phys_next = b;
   }
-}
-void extend_physLL(Block* b){
-  if(phys_tail){
-    phys_tail->phys_next = b;
-  }else{
-    phys_head = b;
-  }
-  b->phys_prev = phys_tail;
-  b->phys_next = NULL;
-  phys_tail = b;
 }
 
 void remove_block_freeLL(Block* b){
@@ -96,16 +110,16 @@ void merge_blocks(Block* a, Block* b){
 }
 
 //Best Fit malloc/free
-void *bf_malloc(size_t size){
+void *ts_malloc_lock(size_t size){
   if (size <= 0) {
     return NULL;
   }
+  pthread_mutex_lock(&lock);
   Block* b = head;
   Block* best = NULL;
   while(b){
-    assert(b->free); // LL only tracks free blocks
+    assert(b->free);
     if( b->size >= size ){ // found a free block big enough
-      // TODO: can split this block to save space
       if(!best || b->size < best->size){
         best = b;
       }
@@ -118,32 +132,28 @@ void *bf_malloc(size_t size){
   if(best){
     if(best->size > BLK_SZ + size){
       // split the block
-      Block* nb = (void*) best + BLK_SZ + size;
-      nb->size = best->size - size - BLK_SZ;
-      best->size -= nb->size + BLK_SZ;
-      extend_freeLL(nb);
-      insert_physLL(best,nb);
-      /*
-      nb->phys_next = best->phys_next;
-      nb->phys_prev = best;
-      best->phys_next = nb;
-      if(nb->phys_next){
-        nb->phys_next->phys_prev = nb;
-      }
-      */
+      Block* addr = (void*) best + best->size - size;
+      Block* nb = initialize_block(addr, size);
+      insert_physLL(best, nb);
+      best->size -= size + BLK_SZ;
+      pthread_mutex_unlock(&lock);
+      return nb+1;
+    }else{
+      remove_block_freeLL(best);
+      pthread_mutex_unlock(&lock);
+      return best+1;
     }
-    remove_block_freeLL(best);
-    return best+1;
+  }else{
+    Block* addr = sbrk(size + BLK_SZ);
+    Block* nb = initialize_block(addr, size);
+    insert_physLL(phys_tail, nb);
+    pthread_mutex_unlock(&lock);
+    return nb+1;
   }
-  // no available block, get a new one
-  b = create_block(size);
-  if(!b){ // sbrk failed
-    return NULL;
-  }
-  return b+1; // jump off header
 }
 
-void bf_free(void* ptr){
+void ts_free_lock(void* ptr){
+  pthread_mutex_lock(&lock);
   if(!ptr){
     return;
   }
@@ -151,11 +161,12 @@ void bf_free(void* ptr){
   extend_freeLL(b);
   merge_blocks(b, b->phys_next);
   merge_blocks(b->phys_prev, b);
+  pthread_mutex_unlock(&lock);
 }
 
 void freeLL_summary(){
   printf("freeLL\n");
-  Block* p = head;
+  Block* p = head_loc;
   while(p){
     printf("%p : %lu\n",p,p->size);
     p = p->next;
@@ -189,4 +200,85 @@ unsigned long get_data_segment_size(){
     p = p->phys_next;
   }
   return sum;;
+}
+
+
+Block* next_seg(Block* b){
+  return (void*)b + b->size + BLK_SZ;
+}
+
+void merge_blocks_loc(Block* a, Block* b){
+  if( a && b && b==next_seg(a)){
+    a->size += b->size + BLK_SZ;
+    remove_block_loc(b);
+  }
+}
+
+void remove_block_loc(Block* b){
+  b->free = 0;
+  if(b != head_loc){
+    b->prev->next = b->next;
+  }else{ // b is head_loc and then head_loc is removed
+    head_loc = head_loc->next; // replace head_loc
+  }
+  if(b != tail_loc){
+    b->next->prev = b->prev;
+  }else{ // b is tail_loc and then tail_loc is removed
+    tail_loc = tail_loc->prev; // replace tail_loc
+  }
+  b->prev = NULL;
+  b->next = NULL;
+}
+
+void *ts_malloc_nolock(size_t size){
+  if (size <= 0) {
+    return NULL;
+  }
+  Block* b = head_loc;
+  Block* best = NULL;
+  while(b){
+    assert(b->free);
+    if( b->size >= size ){ // found a free block big enough
+      if(!best || b->size < best->size){
+        best = b;
+      }
+      if(best->size == size){
+        break;
+      }
+    }
+    b = b->next;
+  }
+  if(best){
+    if(best->size > BLK_SZ + size){
+      // split the block
+      Block* addr = (void*) best + best->size - size;
+      Block* nb = initialize_block(addr, size);
+      best->size -= size + BLK_SZ;
+      return nb+1;
+    }else{
+      remove_block_loc(best);
+      return best+1;
+    }
+  }else{
+    pthread_mutex_lock(&lock);
+    Block* addr = sbrk(size + BLK_SZ);
+    pthread_mutex_unlock(&lock);
+    Block* nb = initialize_block(addr, size);
+    return nb+1;
+  }
+}
+
+void ts_free_nolock(void* ptr){
+  if(!ptr){
+    return;
+  }
+  Block* b = (Block*)ptr - 1; // locate block
+  assert(!b->free);
+  Block* p = tail_loc;
+  while(p>b){
+    p = p->prev;
+  }
+  insert_freeLL(p, b);
+  merge_blocks_loc(b, b->next);
+  merge_blocks_loc(b->prev, b);
 }

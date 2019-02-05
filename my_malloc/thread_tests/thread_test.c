@@ -82,6 +82,8 @@ int main(int argc, char *argv[])
     pthread_create(&threads[i], NULL, allocate, (void *)(&thread_id[i]));
   } //for i
 
+  printf("threads spawn\n");
+  
   for (i=0; i < NUM_THREADS; i++) {
     pthread_join(threads[i], NULL);
   } //for i
