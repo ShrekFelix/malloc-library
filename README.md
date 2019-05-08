@@ -1,6 +1,6 @@
 # implementation
 
-There are 2 versions of thread-safe malloc implementation: one uses mutex lock and the other doesn't except when calling `sbrk()`, which is not thread safe itself. I built up these 2 versions upon existing a non-thread-safe implementation.
+There are 2 versions of thread-safe malloc implementation: one uses mutex lock and the other doesn't except when calling `sbrk()`, which is not thread safe itself. I built up these 2 versions upon my previous non-thread-safe implementation.
 
 - original non-thread-safe implementation
 
