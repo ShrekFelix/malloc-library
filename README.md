@@ -4,7 +4,11 @@ There are 2 versions of thread-safe malloc implementation: one uses mutex lock a
 
 - original non-thread-safe implementation
 
-Request space from kernel by calling `sbrk()` to increase the break of the process. Store the meta data of the allocated space in the beginning of the allocated space. Track all blocks of meta data using a double linked list structure. There are 2 sets of pointers for each block - one tracking the next/previous free block, the other tracking the next/previous physically adjacent block. Freeing and mallocing space would be maintaining the blocks in the linked list, unless there are no free blocks left - then request new space and add that to the linked list.
+-- Request space from kernel by calling `sbrk()` to increase the break of the process. 
+-- Store the meta data of the allocated space in the beginning of the allocated space. 
+-- Track all blocks of meta data using a double linked list structure. 
+--- There are 2 sets of pointers for each block - one tracking the next/previous free block, the other tracking the next/previous physically adjacent block. 
+--- Freeing and mallocing space would be maintaining the blocks in the linked list, unless there are no free blocks left - then request new space and add that to the linked list.
 
 - locking version adaptation
 
