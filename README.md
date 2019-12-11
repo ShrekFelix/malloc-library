@@ -13,10 +13,10 @@ There are 2 versions of thread-safe malloc implementation: one uses mutex lock a
   - non-locking version adaptation
   This implementation requires the use of thread-local storage. In other words, threads maintain their own list of blocks. Note this list should only track free blocks ordered by physical address. This is because allocated memory space is all shared among (read and written by) threads and can not be tracked by any thread locally. 
   The work for each thread would be:
-      - free
-      Recycle the block represented by this address from the public allocated space and updating its local linked list of free blocks
-      - malloc
-      Find the best block from its local linked list of free blocks, split it if possible, and return to the caller. If no such block is found, call `sbrk()`
+    - free
+    Recycle the block represented by this address from the public allocated space and updating its local linked list of free blocks
+    - malloc
+    Find the best block from its local linked list of free blocks, split it if possible, and return to the caller. If no such block is found, call `sbrk()`
       Since I tracked physically adjacent blocks in my original implementation, for this non-locking malloc function I re-built the `bf_malloc()` that only tracks free blocks.
       
       
