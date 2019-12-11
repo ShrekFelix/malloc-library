@@ -21,15 +21,15 @@ There are 2 versions of thread-safe malloc implementation: one uses mutex lock a
 
   The work for each thread would be:
 
-    - free
+      - free
+      
+      Recycle the block represented by this address from the public allocated space and updating its local linked list of free blocks
 
-    Recycle the block represented by this address from the public allocated space and updating its local linked list of free blocks
-
-    - malloc
-
-    Find the best block from its local linked list of free blocks, split it if possible, and return to the caller. If no such block is found, call `sbrk()`
-
-  Since I tracked physically adjacent blocks in my original implementation, for this non-locking malloc function I re-built the `bf_malloc()` that only tracks free blocks.
+      - malloc
+      
+      Find the best block from its local linked list of free blocks, split it if possible, and return to the caller. If no such block is found, call `sbrk()`
+      
+      Since I tracked physically adjacent blocks in my original implementation, for this non-locking malloc function I re-built the `bf_malloc()` that only tracks free blocks.
 
 # test performance
 
