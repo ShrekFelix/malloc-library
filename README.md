@@ -1,4 +1,5 @@
 # implementation
+
 There are 2 versions of thread-safe malloc implementation: one uses mutex lock and the other doesn't except when calling `sbrk()`, which is not thread safe itself. I built up these 2 versions upon my previous non-thread-safe implementation.
 - original non-thread-safe implementation
   - Request space from kernel by calling `sbrk()` to increase the break of the process. 
@@ -17,10 +18,15 @@ There are 2 versions of thread-safe malloc implementation: one uses mutex lock a
       - malloc
       Find the best block from its local linked list of free blocks, split it if possible, and return to the caller. If no such block is found, call `sbrk()`
       Since I tracked physically adjacent blocks in my original implementation, for this non-locking malloc function I re-built the `bf_malloc()` that only tracks free blocks.
+      
+      
 # test performance
+
 The performance of both versions are:
+
 |          Version          | Locking  | Non-locking |
 | :-----------------------: | :------: | :---------: |
 | execution time (seconds)  | 3.155424 |  0.319438   |
 | data segment size (bytes) | 44801040 |  45029296   |
+
 The locking version is significantly slower than the non-locking version. As it serializes the entire process, the threads in it spend most time waiting to acquire the lock, which is inefficient. The non-locking version doesn't have this problem, but it takes more space. This is because each thread only access part of the whole free blocks and will have to request space from kernel more often. However, as I'm using best allocation strategy and split/merge blocks, the space efficiency difference between these 2 versions is not huge.
