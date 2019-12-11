@@ -10,21 +10,22 @@ There are 2 versions of thread-safe malloc implementation: one uses mutex lock a
     - There are 2 sets of pointers for each block - one tracking the next/previous free block, the other tracking the next/previous physically adjacent block. 
     - Freeing and mallocing space would be maintaining the blocks in the linked list, unless there are no free blocks left - then request new space and add that to the linked list.
 
-- locking version adaptation
+- thread safe version
+  - locking version adaptation
 
   Using mutex lock would be the simplist solution. Just aquire a lock when entering the malloc/free functions and release it when exiting. Usually the performance of mutex lock parallelism could be improved by using read/write lock pattern. However, in this particular implementation it makes things awfully complicated. I didn't use that pattern.
 
-- non-locking version adaptation
+  - non-locking version adaptation
 
   This implementation requires the use of thread-local storage. In other words, threads maintain their own list of blocks. Note this list should only track free blocks ordered by physical address. This is because allocated memory space is all shared among (read and written by) threads and can not be tracked by any thread locally. 
 
   The work for each thread would be:
 
-  - free
+    - free
 
     Recycle the block represented by this address from the public allocated space and updating its local linked list of free blocks
 
-  - malloc
+    - malloc
 
     Find the best block from its local linked list of free blocks, split it if possible, and return to the caller. If no such block is found, call `sbrk()`
 
